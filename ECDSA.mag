@@ -1,0 +1,68 @@
+function mmod(a,m)
+/*
+	INPUTS:	-a an integer
+			-m a positive integer (the modulus)
+	OUTPUT:	-r an integer such that r = a mod m and r \in \[-m/2,m/2]
+
+*/
+	a := a mod m;
+	if a gt m div 2 then
+		return a - m;
+	else 
+		return a;
+	end if;
+end function;
+
+function ECDSA_Signing(q,E,G,r,d,m)
+/*
+	 INPUTS: -q is the number of elements of the finite
+			  field over which is defined the curve
+			 -E is the elliptic curve
+			 -G is the base point of E
+			 -r is the order of the point G
+			 -d is Alice private key
+			 -m is the message to be signed
+	 OUTPUT: -(R,s) is the digital signature
+*/
+	
+
+	// k is a secret random parameter chosen in Z_r
+	// in particular it lies in [-r/2,r/2] 
+	// so that we may save one doublig
+	k := Random(-r div 2,r div 2);
+	R := k*G;
+	// we need to cast R to see it as an integer
+	rd := d*Integers()!(R[1]);
+	
+	while rd div r eq 0 do
+		k := Random(-r div 2,r div 2);
+		R := k*G;
+		// we need to cast R to see it as an integer
+		rd := d*Integers()!(R[1]);
+	end while;
+	
+	s := (m + rd)*Modinv(k,r) mod r;
+	return R,s;
+end function;
+
+
+function ECDSA_Verification(q,E,G,r,Q,m,R,s)
+/*
+	 INPUTS: -q is the number of elements of the finite
+			  field over which is defined the curve
+			 -E is the elliptic curve
+			 -G is the base point of E
+			 -r is the order of the point G
+			 -Q is Alice's public key
+			 -m is the message to be signed
+			 -R,s is the digital signature
+	 OUTPUT: -bool is a boolean that says if the
+			  sign is valid
+*/
+	i := Modinv(s,r);
+	u1 := mmod(m*i,r);
+	u2 := mmod(Integers()!(R[1])*i,r);
+  	// observe that here using mmod 
+	// we save 2 doublings 
+	return (u1*G + u2*Q) eq R;
+end function;
